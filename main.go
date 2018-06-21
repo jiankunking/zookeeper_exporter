@@ -21,6 +21,19 @@ func init() {
 	}
 	logLevel = parsedLevel
 
+	if flag.Args() != nil {
+		for index, value := range flag.Args() {
+			log.Printf("flag.Args[%d]=%s", index, value)
+		}
+
+		if len(flag.Args()) > 1 {
+			//获取指定的上报端口
+			*bindAddr = flag.Args()[len(flag.Args())-1]
+			//默认第一个参数是zk信息
+			*zookeeperAddr = flag.Args()[0]
+		}
+	}
+
 	prometheus.MustRegister(version.NewCollector("zookeeper_exporter"))
 }
 
