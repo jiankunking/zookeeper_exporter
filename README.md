@@ -20,3 +20,6 @@ Due to the type of data exposed by Zookeeper's `mntr` command, it currently rese
 比如10.135.22.22:2181 :9123
 目前不支持一个exporter监听多个zk
 如果不指定启动参数 默认监听localhost:2181，默认上报端口9141
+
+## grafana-dashboards
+ [grafana-dashboards](https://github.com/jiankunking/grafana-dashboards/blob/master/README.md)
