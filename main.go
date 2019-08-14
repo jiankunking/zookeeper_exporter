@@ -2,59 +2,35 @@ package main
 
 import (
 	"flag"
+	"github.com/prometheus/common/version"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/version"
 	log "github.com/sirupsen/logrus"
 )
 
-func init() {
-	flag.Parse()
-
-	parsedLevel, err := log.ParseLevel(*rawLevel)
-	if err != nil {
-		log.Fatal(err)
-	}
-	logLevel = parsedLevel
-
-	if flag.Args() != nil {
-		for index, value := range flag.Args() {
-			log.Printf("flag.Args[%d]=%s", index, value)
-		}
-
-		if len(flag.Args()) > 1 {
-			//获取指定的上报端口
-			*bindAddr = flag.Args()[len(flag.Args())-1]
-			//默认第一个参数是zk信息
-			*zookeeperAddr = flag.Args()[0]
-		}
-	}
-
-	prometheus.MustRegister(version.NewCollector("zookeeper_exporter"))
-}
-
 var (
-	logLevel      log.Level = log.InfoLevel
-	bindAddr                = flag.String("bind-addr", ":9141", "bind address for the metrics server")
-	metricsPath             = flag.String("metrics-path", "/metrics", "path to metrics endpoint")
-	zookeeperAddr           = flag.String("zookeeper", "localhost:2181", "host:port for zookeeper socket")
-	rawLevel                = flag.String("log-level", "info", "log level")
-	resetOnScrape           = flag.Bool("reset-on-scrape", true, "should a reset command be sent to zookeeper on each scrape")
-	showVersion             = flag.Bool("version", false, "show version and exit")
+	logLevel   log.Level = log.InfoLevel
+	configFile           = flag.String("config-file", "", "exporter config yaml")
 )
 
 func main() {
-	log.Info(version.Print("zookeeper_exporter"))
 	log.SetLevel(logLevel)
-	if *showVersion {
+	flag.Parse()
+	if *configFile == "" {
+		log.Error("pls set config file")
 		return
 	}
-
+	if err := LoadConfigFromFile(*configFile); err != nil {
+		log.Error(err)
+		return
+	}
 	log.Info("Starting zookeeper_exporter")
+	prometheus.MustRegister(NewZookeeperCollector())
+	prometheus.MustRegister(version.NewCollector("zookeeper_exporter"))
 
 	go serveMetrics()
 
@@ -65,10 +41,10 @@ func main() {
 }
 
 func serveMetrics() {
-	log.Infof("Starting metric http endpoint on %s", *bindAddr)
-	http.Handle(*metricsPath, prometheus.Handler())
+	log.Infof("Starting metric http endpoint on %s", GlobalExporterConfig.ListenAddress)
+	http.Handle(GlobalExporterConfig.MetricsPath, prometheus.Handler())
 	http.HandleFunc("/", rootHandler)
-	log.Fatal(http.ListenAndServe(*bindAddr, nil))
+	log.Fatal(http.ListenAndServe(GlobalExporterConfig.ListenAddress, nil))
 }
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -76,7 +52,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		<head><title>Zookeeper Exporter</title></head>
 		<body>
 		<h1>Zookeeper Exporter</h1>
-		<p><a href="` + *metricsPath + `">Metrics</a></p>
+		<p><a href="` + GlobalExporterConfig.MetricsPath + `">Metrics</a></p>
 		</body>
 		</html>`))
 }
