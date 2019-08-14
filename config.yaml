@@ -1,0 +1,14 @@
+listen_address: "0.0.0.0:2019"
+metrics_path: "/metrics"
+labels:
+  cluster: "zookeeper"
+  env: "prod"
+zookeeper_configs:
+  - name: "zookeeper-c01"
+    address: "zookeeper-c01:2181"
+  - name: "zookeeper-d01"
+    address: "zookeeper-d01:2181"
+  - name: "zookeeper-e01"
+    address: "zookeeper-e01:2181"
+
+
